@@ -14,7 +14,7 @@ def _conv_block(in_ch: int, out_ch: int) -> nn.Sequential:
 
 
 class HotdogCNN(nn.Module):
-    """4-block CNN for binary hotdog classification. Input: 3×128×128."""
+    """4-block CNN for binary hotdog classification. Input: 3×224×224."""
 
     def __init__(self) -> None:
         super().__init__()
