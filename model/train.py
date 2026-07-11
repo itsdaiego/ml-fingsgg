@@ -6,7 +6,7 @@ from pathlib import Path
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader, random_split
+from torch.utils.data import DataLoader, Subset
 from tqdm import tqdm
 
 from dataset import HotdogDataset, TRAIN_TRANSFORMS, VAL_TRANSFORMS
@@ -14,6 +14,7 @@ from network import HotdogCNN
 
 
 CHECKPOINT_DIR = Path(__file__).parent / "checkpoints"
+TEST_SPLIT = 0.15
 
 
 def accuracy(outputs: torch.Tensor, labels: torch.Tensor) -> float:
@@ -80,26 +81,38 @@ def main() -> None:
     parser.add_argument("--batch-size", type=int, default=32)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--val-split", type=float, default=0.2)
+    # this is important since we need to make sure that the same images are in the test split every time we run the script, otherwise we won't be able to compare results across runs
+    parser.add_argument("--seed", type=int, default=42, help="Controls which images land in the test split")
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
 
-    full_dataset = HotdogDataset()
-    print(f"Total samples: {len(full_dataset)}")
+    num_samples = len(HotdogDataset())
+    print(f"Total samples: {num_samples}")
 
-    val_size = int(len(full_dataset) * args.val_split)
-    train_size = len(full_dataset) - val_size
-    train_ds, val_ds = random_split(full_dataset, [train_size, val_size])
+    generator = torch.Generator().manual_seed(args.seed)
+    indices = torch.randperm(num_samples, generator=generator).tolist()
 
-    train_ds.dataset.transform = TRAIN_TRANSFORMS
-    val_ds.dataset.transform = VAL_TRANSFORMS
+    test_size = int(num_samples * TEST_SPLIT)
+    val_size = int(num_samples * args.val_split)
+
+    train_indices = indices[: num_samples - val_size - test_size]
+    val_indices = indices[num_samples - val_size - test_size : num_samples - test_size]
+    test_indices = indices[num_samples - test_size :]
+
+    train_ds = Subset(HotdogDataset(transform=TRAIN_TRANSFORMS), train_indices)
+    val_ds = Subset(HotdogDataset(transform=VAL_TRANSFORMS), val_indices)
+    test_ds = Subset(HotdogDataset(transform=VAL_TRANSFORMS), test_indices)
+
+    print(f"Train: {len(train_ds)} | Val: {len(val_ds)} | Test (held out): {len(test_ds)}")
 
     train_loader = DataLoader(train_ds, batch_size=args.batch_size, shuffle=True, num_workers=4)
     val_loader = DataLoader(val_ds, batch_size=args.batch_size, shuffle=False, num_workers=4)
+    test_loader = DataLoader(test_ds, batch_size=args.batch_size, shuffle=False, num_workers=4)
 
     model = HotdogCNN().to(device)
-    criterion = nn.BCELoss()
+    criterion = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
     CHECKPOINT_DIR.mkdir(exist_ok=True)
@@ -122,6 +135,10 @@ def main() -> None:
 
     print(f"\nBest val accuracy: {best_val_acc:.3f}")
     print(f"Checkpoint saved to {CHECKPOINT_DIR / 'best.pt'}")
+
+    model.load_state_dict(torch.load(CHECKPOINT_DIR / "best.pt", map_location=device))
+    test_loss, test_acc = val_epoch(model, test_loader, criterion, device)
+    print(f"Test loss {test_loss:.4f} acc {test_acc:.3f}")
 
 
 if __name__ == "__main__":

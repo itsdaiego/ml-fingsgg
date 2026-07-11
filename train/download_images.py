@@ -4,7 +4,7 @@ import argparse
 from pathlib import Path
 
 from datasets import load_dataset
-from icrawler.builtin import BingImageCrawler, GoogleImageCrawler
+from icrawler.builtin import BaiduImageCrawler, BingImageCrawler
 from tqdm import tqdm
 
 
@@ -44,15 +44,24 @@ NOT_HOTDOG_SEARCH_QUERIES = [
 
 
 def from_search_engines(n: int, queries: list[str], output_dir: Path) -> None:
-    """Download images via Bing and Google image search."""
+    """Download images via Bing and Baidu image search.
+
+    Each query gets its own crawler instance, whose downloader always starts
+    numbering files from 0. Without a growing `file_idx_offset`, every query
+    would overwrite the previous one's files in `output_dir`.
+    """
     per_engine = n // 2
     per_query = max(1, per_engine // len(queries))
+    offset = 0
 
-    for engine_cls, name in [(BingImageCrawler, "bing"), (GoogleImageCrawler, "google")]:
+    for engine_cls, name in [(BingImageCrawler, "bing"), (BaiduImageCrawler, "baidu")]:
         for query in queries:
             crawler = engine_cls(storage={"root_dir": str(output_dir)})
             print(f"[{name}] '{query}' — {per_query} images")
-            crawler.crawl(keyword=query, max_num=per_query, min_size=(100, 100))
+            crawler.crawl(
+                keyword=query, max_num=per_query, min_size=(100, 100), file_idx_offset=offset
+            )
+            offset += per_query
 
 
 def from_food101_hotdog(n: int, output_dir: Path) -> None:

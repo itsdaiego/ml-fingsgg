@@ -18,6 +18,7 @@ TRAIN_TRANSFORMS = transforms.Compose([
     transforms.RandomRotation(15),
     transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2),
     transforms.ToTensor(),
+    # not really needed since we are not using a predtrained model, but it's a good practice to normalize images when training a CNN
     transforms.Normalize(mean=IMAGENET_MEAN, std=IMAGENET_STD),
 ])
 
