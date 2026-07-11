@@ -19,14 +19,16 @@ TEST_SPLIT = 0.15
 
 def accuracy(outputs: torch.Tensor, labels: torch.Tensor) -> float:
     """Compute binary classification accuracy."""
-    preds = (outputs >= 0.5).float()
+    # outputs are raw logits (BCEWithLogitsLoss expects that), so the decision
+    # boundary is 0.0, not 0.5 — sigmoid(0) == 0.5 is where a probability would cross 50%
+    preds = (outputs >= 0.0).float()
     return (preds == labels).float().mean().item()
 
 
 def train_epoch(
     model: HotdogCNN,
     loader: DataLoader,
-    criterion: nn.BCELoss,
+    criterion: nn.Module,
     optimizer: optim.Optimizer,
     device: torch.device,
 ) -> tuple[float, float]:
@@ -55,7 +57,7 @@ def train_epoch(
 def val_epoch(
     model: HotdogCNN,
     loader: DataLoader,
-    criterion: nn.BCELoss,
+    criterion: nn.Module,
     device: torch.device,
 ) -> tuple[float, float]:
     """Run one validation epoch, return (avg_loss, accuracy)."""

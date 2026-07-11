@@ -32,7 +32,9 @@ def predict(image_path: str) -> tuple[str, float]:
     tensor = TRANSFORM(img).unsqueeze(0)
 
     with torch.no_grad():
-        prob = model(tensor).item()
+        # model returns a raw logit (see network.py), so sigmoid is needed here
+        # to turn it into an actual [0, 1] probability
+        prob = torch.sigmoid(model(tensor)).item()
 
     label = "hotdog" if prob >= 0.5 else "not hotdog"
     confidence = prob if prob >= 0.5 else 1 - prob

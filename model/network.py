@@ -31,4 +31,4 @@ class HotdogCNN(nn.Module):
         x = self.features(x)
         x = self.pool(x)
         x = x.flatten(1)
-        return torch.sigmoid(self.classifier(x)).squeeze(1)
+        return self.classifier(x).squeeze(1)
