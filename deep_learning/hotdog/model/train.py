@@ -28,7 +28,7 @@ def accuracy(outputs: torch.Tensor, labels: torch.Tensor) -> float:
 def train_epoch(
     model: HotdogCNN,
     loader: DataLoader,
-    criterion: nn.Module,
+    loss_fn: nn.Module,
     optimizer: optim.Optimizer,
     device: torch.device,
 ) -> tuple[float, float]:
@@ -41,7 +41,7 @@ def train_epoch(
         labels = labels.float().to(device)
 
         outputs = model(images)
-        loss = criterion(outputs, labels)
+        loss = loss_fn(outputs, labels)
 
         optimizer.zero_grad()
         loss.backward()
@@ -57,7 +57,7 @@ def train_epoch(
 def val_epoch(
     model: HotdogCNN,
     loader: DataLoader,
-    criterion: nn.Module,
+    loss_fn: nn.Module,
     device: torch.device,
 ) -> tuple[float, float]:
     """Run one validation epoch, return (avg_loss, accuracy)."""
@@ -70,7 +70,7 @@ def val_epoch(
             labels = labels.float().to(device)
 
             outputs = model(images)
-            total_loss += criterion(outputs, labels).item()
+            total_loss += loss_fn(outputs, labels).item()
             total_acc += accuracy(outputs, labels)
 
     n = len(loader)
@@ -114,15 +114,15 @@ def main() -> None:
     test_loader = DataLoader(test_ds, batch_size=args.batch_size, shuffle=False, num_workers=4)
 
     model = HotdogCNN().to(device)
-    criterion = nn.BCEWithLogitsLoss()
+    loss_fn = nn.BCEWithLogitsLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
     CHECKPOINT_DIR.mkdir(exist_ok=True)
     best_val_acc = 0.0
 
     for epoch in range(1, args.epochs + 1):
-        train_loss, train_acc = train_epoch(model, train_loader, criterion, optimizer, device)
-        val_loss, val_acc = val_epoch(model, val_loader, criterion, device)
+        train_loss, train_acc = train_epoch(model, train_loader, loss_fn, optimizer, device)
+        val_loss, val_acc = val_epoch(model, val_loader, loss_fn, device)
 
         print(
             f"Epoch {epoch:03d}/{args.epochs} | "
@@ -139,7 +139,7 @@ def main() -> None:
     print(f"Checkpoint saved to {CHECKPOINT_DIR / 'best.pt'}")
 
     model.load_state_dict(torch.load(CHECKPOINT_DIR / "best.pt", map_location=device))
-    test_loss, test_acc = val_epoch(model, test_loader, criterion, device)
+    test_loss, test_acc = val_epoch(model, test_loader, loss_fn, device)
     print(f"Test loss {test_loss:.4f} acc {test_acc:.3f}")
 
 
