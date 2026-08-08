@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from train import CHECKPOINT_PATH, DATA_PATH, TEST_YEAR, encode_cities, encode_dates
+from train import CHECKPOINT_PATH, DATA_PATH, TEST_YEAR, create_model, encode_cities, encode_dates
 
 
 CORRECT_TOLERANCE_C = 2.0
@@ -25,7 +25,7 @@ y_test = torch.tensor(test_df["temperature_c"].to_numpy(dtype=np.float32)).unsqu
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-model = torch.nn.Linear(in_features=x_test.shape[1], out_features=1).to(device)
+model = create_model(x_test.shape[1]).to(device)
 model.load_state_dict(checkpoint["model_state_dict"])
 model.eval()
 

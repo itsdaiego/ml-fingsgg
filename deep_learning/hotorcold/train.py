@@ -9,7 +9,8 @@ from torch.nn import MSELoss
 DATA_PATH = Path(__file__).parent / "data" / "temperature_samples.csv"
 CHECKPOINT_PATH = Path(__file__).parent / "checkpoints" / "temperature_model.pt"
 TEST_YEAR = 2025
-EPOCH_ROUNDS = 1_000
+EPOCH_ROUNDS = 10_000
+LEARNING_RATE = 0.01
 
 
 def encode_dates(dates: pd.Series) -> pd.DataFrame:
@@ -38,6 +39,14 @@ def encode_cities(cities: pd.Series, city_names: list[str]) -> pd.DataFrame:
     return pd.DataFrame(encoded, columns=city_names, index=cities.index)
 
 
+def create_model(input_features: int) -> torch.nn.Sequential:
+    return torch.nn.Sequential(
+        torch.nn.Linear(input_features, 16),
+        torch.nn.ReLU(),
+        torch.nn.Linear(16, 1),
+    )
+
+
 if __name__ == "__main__":
     df = pd.read_csv(DATA_PATH)
     years = pd.to_datetime(df["date"]).dt.year
@@ -51,9 +60,12 @@ if __name__ == "__main__":
     y_train = torch.tensor(train_df["temperature_c"].to_numpy(dtype=np.float32)).unsqueeze(1)
 
     torch.manual_seed(42)
-    model = torch.nn.Linear(in_features=x_train.shape[1], out_features=1)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    x_train = x_train.to(device)
+    y_train = y_train.to(device)
+    model = create_model(x_train.shape[1]).to(device)
     loss_fn = MSELoss()
-    optimizer = torch.optim.SGD(model.parameters(), lr=0.0001)
+    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
     total_loss = 0.0
 
     for epoch in range(EPOCH_ROUNDS):
@@ -72,4 +84,5 @@ if __name__ == "__main__":
         },
         CHECKPOINT_PATH,
     )
+    print(f"Device: {device}")
     print(f"Mean training loss: {total_loss / EPOCH_ROUNDS:.4f}")
