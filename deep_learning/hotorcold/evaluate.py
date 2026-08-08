@@ -5,7 +5,7 @@ import torch
 from train import CHECKPOINT_PATH, DATA_PATH, TEST_YEAR, create_model, encode_cities, encode_dates
 
 
-CORRECT_TOLERANCE_C = 2.0
+CORRECT_TOLERANCE_C = 0.5
 
 checkpoint = torch.load(CHECKPOINT_PATH, weights_only=True)
 
@@ -48,4 +48,4 @@ for city, prediction, actual, error, is_correct in zip(
 
 print(f"Result MSE: {mse:.4f}")
 print(f"Result MAE: {mae:.2f} C")
-print(f"Within {CORRECT_TOLERANCE_C:.0f} C: {correct.float().mean().item():.1%}")
+print(f"Within {CORRECT_TOLERANCE_C:.1f} C: {correct.float().mean().item():.1%}")

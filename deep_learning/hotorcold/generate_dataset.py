@@ -15,6 +15,7 @@ from pathlib import Path
 
 SAMPLES_PER_CITY = 1_000
 SEED = 42
+NOISE_STD_C = 0.25
 START = date(2016, 1, 1)
 END = date(2025, 12, 31)
 OUTPUT_PATH = Path(__file__).parent / "data" / "temperature_samples.csv"
@@ -48,7 +49,7 @@ def temperature_c(
     return round(
         average_c
         + seasonal_range_c * math.cos(day_angle)
-        + rng.gauss(0, 2.0),
+        + rng.gauss(0, NOISE_STD_C),
         1,
     )
 
